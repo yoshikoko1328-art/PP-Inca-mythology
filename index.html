@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アンデス・南米神話伝承マップ</title>
+    <style>
+        :root {
+            --bg-white: #fcfaf2;
+            --bg-beige: #e8dfc8;
+            --bg-beige-light: #f4ebd0;
+            --accent-yellow: #d4af37;
+            --accent-yellow-dark: #b38f28;
+            --text-dark: #3a2e2b;
+            --text-muted: #6e5d4f;
+            --border-color: #c5b388;
+            --card-shadow: 0 4px 12px rgba(92, 64, 51, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Times New Roman', "游明朝", "Yu Mincho", "Hiragino Mincho ProN", serif;
+            background-color: var(--bg-white);
+            color: var(--text-dark);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ヘッダー UI */
+        header {
+            background-color: var(--bg-beige-light);
+            border-bottom: 2px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            color: var(--text-dark);
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-family: inherit;
+            color: var(--text-dark);
+            width: 200px;
+            outline: none;
+        }
+
+        .search-box input:focus {
+            border-color: var(--accent-yellow-dark);
+        }
+
+        /* メインレイアウト */
+        .main-container {
+            display: flex;
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* キャンバス・地図領域 */
+        #map-container {
+            flex: 1;
+            position: relative;
+            cursor: grab;
+            background-color: var(--bg-beige);
+            overflow: hidden;
+        }
+
+        #map-container:active {
+            cursor: grabbing;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* マップのズームコントロール */
+        .zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 5;
+        }
+
+        .zoom-btn {
+            width: 36px;
+            height: 36px;
+            background: var(--bg-beige-light);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--text-dark);
+            cursor: pointer;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .zoom-btn:hover {
+            background: var(--bg-white);
+            color: var(--accent-yellow-dark);
+        }
+
+        /* サイドパネル (詳細情報) */
+        .sidebar {
+            width: 380px;
+            background: var(--bg-white);
+            border-left: 2px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            z-index: 5;
+            transition: transform 0.3s ease;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.05);
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(100%);
+            position: absolute;
+            right: 0;
+            height: 100%;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            background: var(--bg-beige-light);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.2rem;
+            color: var(--text-dark);
+        }
+
+        .region-selector {
+            padding: 10px 15px;
+            background: var(--bg-beige);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+        }
+
+        .region-tab {
+            padding: 5px 10px;
+            font-size: 0.85rem;
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .region-tab.active {
+            background: var(--accent-yellow);
+            color: #fff;
+            border-color: var(--accent-yellow-dark);
+        }
+
+        .type-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .type-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            background: var(--bg-beige-light);
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        .type-tab.active {
+            background: var(--bg-white);
+            border-bottom: 3px solid var(--accent-yellow-dark);
+            color: var(--accent-yellow-dark);
+        }
+
+        .item-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            user-select: text;
+        }
+
+        .item-card {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .item-card:hover {
+            border-color: var(--accent-yellow-dark);
+            box-shadow: var(--card-shadow);
+        }
+
+        .item-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .item-location {
+            font-size: 0.8rem;
+            color: var(--accent-yellow-dark);
+            margin-bottom: 8px;
+            font-style: italic;
+        }
+
+        .item-section {
+            margin-top: 6px;
+            font-size: 0.88rem;
+            line-height: 1.4;
+        }
+
+        .item-section-title {
+            font-weight: bold;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        /* 凡例 (Legend) */
+        .legend {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(252, 250, 242, 0.9);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            z-index: 5;
+            box-shadow: var(--card-shadow);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-icon {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .icon-god { background-color: var(--accent-yellow); border: 1px solid #7a6011; }
+        .icon-monster { background-color: #6b4c7d; border: 1px solid #362242; }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                height: 50%;
+                border-left: none;
+                border-top: 2px solid var(--border-color);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🏛️ アンデス・南米神話伝承マップ</h1>
+        <div class="header-controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="神・妖怪を検索...">
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div id="map-container">
+            <canvas id="mapCanvas"></canvas>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <span class="legend-icon icon-god"></span>
+                    <span>神様（10柱 / 地域）</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-icon icon-monster"></span>
+                    <span>怪物・妖怪（10体 / 地域）</span>
+                </div>
+            </div>
+
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="zoomIn">+</button>
+                <button class="zoom-btn" id="zoomOut">-</button>
+                <button class="zoom-btn" id="zoomReset">⟲</button>
+            </div>
+        </div>
+
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2 id="sidebarTitle">ペルー（インカ中心地）</h2>
+            </div>
+            
+            <div class="region-selector" id="regionTabs">
+                <!-- 地域タブが動的生成されます -->
+            </div>
+
+            <div class="type-tabs">
+                <div class="type-tab active" id="tabGods">神様 (10)</div>
+                <div class="type-tab" id="tabMonsters">化け物・妖怪 (10)</div>
+            </div>
+
+            <div class="item-list" id="itemList">
+                <!-- リストが動的に挿入されます -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- データベース定義 (ユーザー提供の全データを格納) ---
+        const mapData = {
+            peru: {
+                name: "ペルー",
+                subtitle: "インカ神話の中心地",
+                coords: { x: 350, y: 380 },
+                gods: [
+                    { name: "ヴィラコチャ", originName: "Viracocha", location: "ペルー（クスコ、ティワナク周辺）", content: "世界と人類を創造した至高の神。光と太陽、文明の創造者。", origin: "カオス（原始の混沌）から現れ、最初の大地と巨人を創り出したとされる。" },
+                    { name: "インティ", originName: "Inti", location: "ペルー（クスコ）", content: "太陽神。インカ皇帝の祖先とされ、農業の豊作をもたらす最も重要な神。", origin: "最高神ヴィラコチャによって天に配置されたとされる。" },
+                    { name: "ママ・キリャ", originName: "Mama Quilla", location: "ペルー（クスコ）", content: "月の女神。インティの妻であり姉妹。暦や女性の生理周期、結婚を司る。", origin: "ヴィラコチャによって天の夜を照らす存在として生み出された。" },
+                    { name: "パチャママ", originName: "Pachamama", location: "ペルー（アンデス全域）", content: "大地母神。肥沃な土壌と収穫を守る神格。", origin: "世界の創造と同時に大地そのものとして存在したとされる自然発生的な神。" },
+                    { name: "イリャパ", originName: "Illapa", location: "ペルー（アンデス高地）", content: "雷と雨の神。軍神としての性質も持ち、水資源を管理する。", origin: "天界の水分を杖で叩くことで雷鳴と雨を降らせる存在として誕生した。" },
+                    { name: "パチャカマック", originName: "Pachacamac", location: "ペルー（沿岸部パチャカマック遺跡）", content: "大地を揺るがす地震の神。予言の神としても崇められた。", origin: "太陽と月の間に生まれ、最初に作られた人類の創造者とされる（諸説あり）。" },
+                    { name: "ママ・コチャ", originName: "Mama Cocha", location: "ペルー（沿岸部およびチチカカ湖）", content: "海と水の女神。漁師を守護し、暴風雨を静める。", origin: "ヴィラコチャの水脈創造に伴い、すべての海洋・湖沼の源として現れた。" },
+                    { name: "コン", originName: "Kon", location: "ペルー（北海岸部）", content: "風と雨の神。パチャカマック以前に海岸地域を支配していたとされる。", origin: "南の空からやってきた骨のない精霊として誕生した。" },
+                    { name: "スパイ", originName: "Supai", location: "ペルー（地下世界ウク・パチャ）", content: "地下世界（ウク・パチャ）の支配者。死者と鉱山を守る神（のちに悪魔視される）。", origin: "インカの三層世界構築時に、地下領域を治める存在として指定された。" },
+                    { name: "ウナク・パチャ", originName: "Unu Pachacutiの主神", location: "ペルー（アンデス全域）", content: "大洪水（ウナク・パチャ）を引き起こして世界を浄化する裁きの神性。", origin: "人類の不遜さに憤った最高神ヴィラコチャの意志から生まれた。" }
+                ],
+                monsters: [
+                    { name: "アマル", originName: "Amaru", location: "ペルー（アンデス高地）", content: "竜または巨大な双頭の蛇。地下世界と地上を結び、天候を左右する。", origin: "大地のエネルギーが物質化し、洞窟や湖の底で生まれたとされる。" },
+                    { name: "ピシュタコ", originName: "Pishtaco", location: "ペルー（アンデス山岳地帯）", content: "夜道で旅人を襲い、人間の脂（あぶら）を抜き取る白い肌の怪物。", origin: "スペイン人の侵入によるトラウマや過酷な搾取の記憶から生まれた伝承上の怪人。" },
+                    { name: "ヤカリュナ", originName: "Yacuruna", location: "ペルー（アマゾン盆地）", content: "水の精霊。水中に住み、人間を魅力的な姿で誘惑して引きずり込む。", origin: "深い川の底にある幻の水底都市の主として誕生した。" },
+                    { name: "チュキチャキ", originName: "Chullachaqui", location: "ペルー（アマゾン熱帯雨林）", content: "森の守護精霊。片方の足が逆を向いているか鹿の足になっており、旅人を迷わせる。", origin: "森の生態系を人間から保護するために大自然から生まれた。" },
+                    { name: "ハラク・プーナ", originName: "Jarjaria / Jarjacha", location: "ペルー（アイアクーチョ等）", content: "近親相姦を行った人間が変身するとされる、ふたつの頭を持つラマの怪物。", origin: "禁忌を破った罪により神の呪いを受けて化け物へ変貌した。" },
+                    { name: "イク", originName: "Urcuchillayの化身", location: "ペルー（高地部）", content: "家畜を喰らう野獣の姿をした影の怪物。", origin: "牧草地の暗がりと夜の恐怖が形を成したもの。" },
+                    { name: "ムチュク", originName: "Muki", location: "ペルー（鉱山地帯）", content: "鉱山に住む背の低い小鬼。鉱夫に悪戯をするが、贈り物を与えると鉱脈を教える。", origin: "地下の鉱脈を守る大地の精神が集体化して生まれた。" },
+                    { name: "ルナ・プーマ", originName: "Runapuma", location: "ペルー（アマゾン領域）", content: "人間に化ける人食いジャガー（人狼のジャガー版）。", origin: "邪悪な呪術師が儀式によって自らをジャガーに変身させた姿。" },
+                    { name: "カペルチ", originName: "Caperuchi", location: "ペルー（アンデス農村）", content: "夜間に農作物を荒らし、家畜の血を吸う小さな悪霊。", origin: "荒廃した農地や見捨てられた墓場から湧き出たとされる。" },
+                    { name: "クカコチャの蛇", originName: "Cocha Serpent", location: "ペルー（チチカカ湖）", content: "湖の深部に潜み、船を丸呑みにする巨大水蛇。", origin: "古代の水害の恐怖が具現化した存在。" }
+                ]
+            },
+            bolivia: {
+                name: "ボリビア",
+                subtitle: "チチカカ湖・高地カルチャー",
+                coords: { x: 480, y: 480 },
+                gods: [
+                    { name: "トゥヌパ", originName: "Tunupa", location: "ボリビア（アイマラ文化圏・サラー・デ・ウユニ周辺）", content: "火山・火山灰・火山噴火と恵みの雨を制御する古代神。", origin: "地殻変動と大地の怒りから自然発生的に誕生したアイマラの神。" },
+                    { name: "エケコ", originName: "Ekeko", location: "ボリビア（ラパスなど）", content: "繁栄と福徳をもたらす福の神。ミニチュアの荷物を背負った姿で描かれる。", origin: "トワナコ文化期の豊穣の精霊が時代を経て庶民の神となった。" },
+                    { name: "ティウ", originName: "El Tío", location: "ボリビア（ポトシ鉱山）", content: "鉱山の地下世界を支配する神（悪魔の姿をしている）。安全と鉱石を与える。", origin: "インカの地下神スパイが、カトリックの悪魔概念と融合して誕生。" },
+                    { name: "ワカリ", originName: "Huajari", location: "ボリビア（アルティプラーノ高地）", content: "風と荒野を守護する精霊的低階層の神。", origin: "高地の冷たい嵐から生まれた。" },
+                    { name: "イルヤニ", originName: "Illimaniの山神アプ", location: "ボリビア（イルヤマニ山）", content: "山（アプ）そのものが神格化した強力な守護神。", origin: "世界創造時に大地を支える柱としてヴィラコチャによって置かれた。" },
+                    { name: "ママ・オクロ", originName: "Mama Ocllo", location: "ボリビア/ペルー（チチカカ湖）", content: "織物と家事を人々に教えた知恵の女神。マンコ・カパックの妻。", origin: "太陽神インティが人類を文明化するためにチチカカ湖から誕生させた。" },
+                    { name: "マンコ・カパック", originName: "Manco Cápac", location: "ボリビア/ペルー（チチカカ湖の太陽の島）", content: "初代インカ皇帝とされる神格化された建国神。", origin: "太陽神インティの息子としてチチカカ湖から生み出された。" },
+                    { name: "コチャママ", originName: "Kochamama", location: "ボリビア（高地湖沼群）", content: "淡水湖と沼地を守護する水の神。", origin: "高地の生命線である水場を保つために生まれた。" },
+                    { name: "サハマ", originName: "Sajamaの山神", location: "ボリビア（サハマ国立公園周辺）", content: "孤高の山神。西方の安全と自然の均衡を保つ。", origin: "他の山神との戦いに敗れ、現在の場所に配置された伝承を持つ。" },
+                    { name: "ウク・パチャの使者", originName: "Uku Pacha Messenger", location: "ボリビア（地下世界伝承）", content: "地下と地上を行き来し、鉱物資源の循環を担う神霊。", origin: "地下の神ティウの従者として生成された。" }
+                ],
+                monsters: [
+                    { name: "カワク", originName: "Kawak", location: "ボリビア（アルティプラーノ）", content: "干ばつを引き起こす炎の怪鳥。", origin: "太陽の異常な熱気が大気に凝縮して生まれた。" },
+                    { name: "カリカンカリ", originName: "Kharisiri", location: "ボリビア（アンデス高地）", content: "眠っている人間の内臓脂肪や血液を秘かに抜き取る悪霊。", origin: "異文化の侵略者への恐怖が悪霊化したもの。" },
+                    { name: "ワヤイ", originName: "Huayay", location: "ボリビア（熱帯平原部）", content: "夜の森で不気味な悲鳴をあげ、行き交う人を狂わせる精霊。", origin: "森で遭難して死んだ者の念が怪物化した。" },
+                    { name: "サクプラ", originName: "Sacpata", location: "ボリビア（鉱山周辺）", content: "落盤事故を引き起こす地下の嫌がらせ妖怪。", origin: "掘り進められた落盤の危険性が具現化した。" },
+                    { name: "アンチャチャル", originName: "Anchachall", location: "ボリビア（高地荒野）", content: "吹雪を起こして旅人を凍死させる風の悪魔。", origin: "アンデスの酷寒の気候そのものが意志を持った存在。" },
+                    { name: "ルナ・ワルミ", originName: "Runa Warmiの化身", location: "ボリビア（村落境界部）", content: "美女の姿で男を誘惑し、人里離れた場所で皮を剥ぐ怪物。", origin: "境界を侵す者への戒めから生み出された伝承。" },
+                    { name: "チチ", originName: "Jichi", location: "ボリビア（低地部・サンタクルス）", content: "水源（池や井戸）を守る水蛇または水トカゲの怪物。粗末に扱うと水を干上がらせる。", origin: "生命の水源を守護するために自然から現れた。" },
+                    { name: "ボボ", originName: "Bobo", location: "ボリビア（アンデス山麓）", content: "毛深い巨人の姿をした怪物。人間を捕まえて食べる。", origin: "人未踏の山奥の恐怖が具現化した。" },
+                    { name: "カタリ", originName: "Katari", location: "ボリビア（アイマラ伝承）", content: "翼を持つ毒蛇。災いと破滅の予兆とされる。", origin: "地下の邪気が凝縮して生み出された。" },
+                    { name: "カントゥータの影", originName: "Kantuta Shadow", location: "ボリビア（高地）", content: "花の周囲に現れ、子供の魂を奪う邪悪な幻影。", origin: "幼児死亡率の高さに対する不安から生まれた。" }
+                ]
+            },
+            ecuador: {
+                name: "エクアドル",
+                subtitle: "北部インカ領域",
+                coords: { x: 300, y: 220 },
+                gods: [
+                    { name: "チムボラソ", originName: "Chimborazo의 Apu", location: "エクアドル（チムボラソ山）", content: "父なる山神。強大な力を持ち、天候をコントロールする。", origin: "世界創造時に火と岩から誕生した最高峰の山神。" },
+                    { name: "ママ・トゥングラウア", originName: "Mama Tungurahua", location: "エクアドル（トゥングラウア火山）", content: "母なる火山神。チムボラソの妻とされる。", origin: "大地の怒りと情熱が火山の形をとって生まれた。" },
+                    { name: "ピチンチャ", originName: "Pichincha", location: "エクアドル（キト近郊）", content: "キトの街を見守る守護神的な火山神。", origin: "大地の隆起とともに北部の守護として生まれた。" },
+                    { name: "カンタリ", originName: "Canti", location: "エクアドル（海岸部カニャーリ伝承）", content: "月と水を司る古代神。", origin: "大洪水から人々を救った聖なる蛇から派生した。" },
+                    { name: "コタカチ", originName: "Cotacachi", location: "エクアドル（北部高地）", content: "女性的な優しさを持つ山神。農作物の成熟を助ける。", origin: "チムボラソ神の愛を受けた山として生まれた。" },
+                    { name: "イリニサ", originName: "Iliniza", location: "エクアドル（中央高地）", content: "双子の頂を持つ神。調和と二面性を象徴する。", origin: "世界の対立概念（陰陽）を保持するために作られた。" },
+                    { name: "クエンカの水神", originName: "Cuenca Water Deity", location: "エクアドル（南部カニャーリ地域）", content: "河川の流れる豊かな恵みを与える神。", origin: "川脈の発生とともに宿った神性。" },
+                    { name: "カニャール", originName: "Cañar", location: "エクアドル（南部）", content: "カニャーリ族の祖先神。金と銀の守護者。", origin: "聖なる湖から舞い降りたコンドルと大蛇の交わりから生まれた。" },
+                    { name: "アタワルパの守護神", originName: "Atahualpa Protective Spirit", location: "エクアドル（キト）", content: "王権と正統性を守るインカ北部の神霊。", origin: "インカ拡張時に北部の王権を補強するために合祀された。" },
+                    { name: "スチ", originName: "Succhi", location: "エクアドル（熱帯雨林境界）", content: "植物の成長と森の生命力を司る神。", origin: "雨林の豊かな植生から自発生的に生まれた。" }
+                ],
+                monsters: [
+                    { name: "チュレル", originName: "Chuzalongo", location: "エクアドル（アンデス山脈）", content: "長い陰茎を持つ少年の姿をした森の怪物。女性を襲うとされる。", origin: "山の荒々しい生殖力と野生の脅威が具現化した。" },
+                    { name: "ティンティン", originName: "Tin Tin", location: "エクアドル（沿岸部）", content: "頭が大きく大きな帽子を被った小男。女性の後をつけ、悪夢を見せる。", origin: "夜の恐怖と民間信仰の悪戯好きの精霊が合体した。" },
+                    { name: "フアン・ボラドール", originName: "Juan Volador", location: "エクアドル（高地村落）", content: "空を飛び回り、家畜を奪う不気味な怪人。", origin: "邪法を使った魔術師の末路とされる。" },
+                    { name: "ウマ", originName: "Uma / La Cabeza Voladora", location: "エクアドル（高地全域）", content: "胴体から離れて夜空を飛ぶ生首の怪物。髪の毛で人に絡みつく。", origin: "呪いを受けた悪人の首が離脱して化け物となった。" },
+                    { name: "ラ・ヤボラ", originName: "La Yabora", location: "エクアドル（森の境界）", content: "沼地に潜み、旅人を泥の中に引きずり込む泥の怪物。", origin: "底なし沼の危険性を伝えるための戒めから発生。" },
+                    { name: "アヤ・ウマ", originName: "Aya Huma", location: "エクアドル（インティ・ライミの祭り等）", content: "前後にふたつの顔を持つ精霊（悪魔的側面もある）。自然の力を象徴する。", origin: "日と夜、対極のエネルギーが衝突して誕生した。" },
+                    { name: "クンベ", originName: "Cumbe", location: "エクアドル（南海岸）", content: "深海に棲む大タコのような海洋生物の怪物。", origin: "激しい海流と船員の畏怖から生まれた。" },
+                    { name: "ヴィルカ・ルナ", originName: "Vilca Runa", location: "エクアドル（熱帯境界）", content: "木の皮の皮膚を持つ巨大な森の男。", origin: "倒された神木の執念から生まれた。" },
+                    { name: "グアハハ", originName: "Huajaja", location: "エクアドル（渓谷部）", content: "高笑いをして不吉を知らせる笑い声だけの妖怪。", origin: "谷間の山彦（エコー）現象が怪異化した。" },
+                    { name: "サワン", originName: "Sawan", location: "エクアドル（アマゾン近郊）", content: "アナコンダが数百年を生きて変化した巨大な怪獣。", origin: "老化した大蛇が超自然的な力を得て変貌した。" }
+                ]
+            },
+            chile: {
+                name: "チリ",
+                subtitle: "南部インカ領土・マプチェ影響領域",
+                coords: { x: 380, y: 680 },
+                gods: [
+                    { name: "ピルパン", originName: "Pillan", location: "チリ（火山地帯）", content: "火山と雷を司る強力な至高の霊神（マプチェ・インカ融合領域）。", origin: "天界の最高峰の力として世界の始まると同時に存在した。" },
+                    { name: "ペパン", originName: "Ngenechen", location: "チリ（中央部）", content: "人類を支配し、生命を与える万物の主。", origin: "世界に秩序をもたらすために天の頂から生まれた。" },
+                    { name: "カイカイ", originName: "Cai Cai Vilu", location: "チリ（海岸部）", content: "海を支配する巨大な蛇神。大津波を引き起こす。", origin: "大地との対立のために深海から生み出された。" },
+                    { name: "トレントレン", originName: "Tren Tren Vilu", location: "チリ（山岳部）", content: "大地と山を守護する蛇神。カイカイの津波から人類を保護する。", origin: "海の暴走に対抗するため大地の意志から生まれた。" },
+                    { name: "アンタウ", originName: "Antu", location: "チリ（高地）", content: "太陽の光と熱を象徴する雄大な神。", origin: "天界の光のエネルギーが集結して誕生。" },
+                    { name: "クエン", originName: "Kuyen", location: "チリ（夜空）", content: "月の女神。アンタウの妻であり、夢と夜を守る。", origin: "太陽の対極として夜の静寂から生まれた。" },
+                    { name: "ラニエン", originName: "Rayen", location: "チリ（アンデス山麓）", content: "春と花々を咲かせる美と再生の女神。", origin: "雪解け水が大地に触れた瞬間に生まれた。" },
+                    { name: "マウリ", originName: "Meulen", location: "チリ（平原部）", content: "つむじ風を制御する風の神。", origin: "大気と温度の格差から発生した。" },
+                    { name: "エル・ロンコ", originName: "El Lonco", location: "チリ（北部インカ行政区）", content: "知恵と共同体の統治権を与える長老神。", origin: "人類の指導者を導くために創出された。" },
+                    { name: "ペウエン", originName: "Pehuen Spirit", location: "チリ（ナンヨウスギの森）", content: "パラソルマツ（ペウエン）の木に宿る豊穣の神。", origin: "寒冷地での飢餓から人々を救うために誕生。" }
+                ],
+                monsters: [
+                    { name: "チョンチョン", originName: "Chonchon", location: "チリ（全域）", content: "人間の首が離脱し、巨大化した耳を羽ばたかせて飛ぶ不気味な鳥状の怪物。", origin: "邪悪な魔術師（マティ）が薬を使って変身した姿。" },
+                    { name: "トラウコ", originName: "Trauco", location: "チリ（チロエ島伝承）", content: "醜い顔をした小男。強力な視線と吐息で女性を魅惑し、妊娠させる。", origin: "森の野生的な生命力と性的恐怖の象徴として現れた。" },
+                    { name: "フィウラ", originName: "Fiura", location: "チリ（チロエ島）", content: "トラウコの妻とされる醜悪な女悪魔。触れた者の関節を曲げて病気にする。", origin: "腐敗した沼地の悪気から生まれた。" },
+                    { name: "クエルボ", originName: "Cuero", location: "チリ（湖沼・川）", content: "牛の皮のような形をした水棲の怪物。人間を包み込んで消化する。", origin: "水底に沈んだ動物の皮に邪悪な霊が取り憑いて誕生。" },
+                    { name: "カレウチェ", originName: "Caleuche", location: "チリ（チロエ島周辺の海）", content: "美しい音楽を奏でながら航海する幽霊船。乗組員は溺死者や溺れさせた者。", origin: "海で命を落とした者たちの魂が集まり結実した。" },
+                    { name: "ピウチェン", originName: "Pihuenchen", location: "チリ（森・山岳）", content: "翼を持つ蛇の姿をした吸血怪物。人や家畜の血を遠くから吸う。", origin: "樹齢を重ねた樹木から分泌される液体が生命を持った。" },
+                    { name: "ブノ", originName: "Alicanto", location: "チリ（アタカマ砂漠）", content: "金や銀を食べるために体が発光する伝説の鳥。欲深い者を崖から落とす。", origin: "砂漠の鉱物エネルギーから生まれた。" },
+                    { name: "カベサ・デ・バカ", originName: "Cabeza de Vaca", location: "チリ（アンデス境界）", content: "牛の頭を持ち、夜間に村を襲う怪物。", origin: "西洋の家畜文化と先住民の野獣の恐怖が合体した。" },
+                    { name: "イブンチェ", originName: "Imbunche", location: "チリ（魔術師の洞窟）", content: "首が後ろを向き、片足が背中に縫い付けられた洞窟の守護怪物。", origin: "魔術師によって赤ん坊の時に骨を折られ、異形に改造されて作られた。" },
+                    { name: "カルカン", originName: "Calchona", location: "チリ（農村部）", content: "泥棒や不審者を襲う、髪の長い黒い犬の怪物。", origin: "魔法の塗料を塗り間違えて動物の姿から戻れなくなった魔女。" }
+                ]
+            },
+            argentina: {
+                name: "アルゼンチン",
+                subtitle: "西北部インカ領土",
+                coords: { x: 490, y: 620 },
+                gods: [
+                    { name: "コハカ", originName: "Coquena", location: "アルゼンチン（プーナ高地）", content: "野生動物（特にビクーニャやラマ）を守護する小人の神。密猟者を罰する。", origin: "自然の生態系を守るため、パチャママの使いとして生み出された。" },
+                    { name: "ユンカ", originName: "Yunca", location: "アルゼンチン（西北部谷間）", content: "渓谷と灌漑用水を司る恵みの神。", origin: "乾いた谷に水を引き入れた古代の英雄が死後神格化した。" },
+                    { name: "チャルチャキ", originName: "Challchaki", location: "アルゼンチン（フフイ・サルタ）", content: "山々の鉱物と石を守る大地の神性。", origin: "山脈の形成時に岩の核として生じた。" },
+                    { name: "ミナママ", originName: "Minamama", location: "アルゼンチン（アンデス山麓）", content: "銀鉱山を生み出す母なる神。", origin: "地中の深部で脈打つ地球の血液から生み出された。" },
+                    { name: "カチャニ", originName: "Cachani", location: "アルゼンチン（サルタ周辺）", content: "播種と農耕の成功を祈願する季節の神。", origin: "雨季の訪れとともに空から降り立つ。" },
+                    { name: "インカ・レイ", originName: "Inkarri", location: "アルゼンチン西北部/ペルー", content: "復興と未来のインカを約束するメシア的神格。", origin: "スペイン人に処刑された最後の皇帝の頭部から再誕の祈りとして生まれた。" },
+                    { name: "ウアルパ", originName: "Huarpa", location: "アルゼンチン（カルチャキの谷）", content: "風と風車、穀物の脱穀を助ける日常の小神。", origin: "山風の一定の周期から見出された。" },
+                    { name: "サマル", originName: "Samal", location: "アルゼンチン（高地乾燥帯）", content: "渇きから旅人を守る泉の神。", origin: "慈悲深いパチャママが流した涙から生まれた。" },
+                    { name: "ヤクタママ", originName: "Yactamama", location: "アルゼンチン（熱帯境界部）", content: "すべての水生生物の母である巨大な大蛇神。", origin: "太古の泥沼から生み出された生命の源泉。" },
+                    { name: "ポトシの風神", originName: "Wind of Puna", location: "アルゼンチン高地", content: "高地の強風（ソoche）をコントロールする冷気の神。", origin: "アンデス山脈を越える気流から生じた。" }
+                ],
+                monsters: [
+                    { name: "ルガル", originName: "El Lobizón", location: "アルゼンチン（広域）", content: "7番目の男の子が変身すると言われる不気味な人狼。", origin: "カトリック文化と現地神話の呪いが融合して誕生。" },
+                    { name: "ファミリア", originName: "La Familia / El Familiar", location: "アルゼンチン（製糖工場・農園）", content: "人間を喰らう巨大な黒い犬の悪魔。事業主が富を得るために契約する。", origin: "資本主義的な過酷な労働搾取の恐怖から生み出された。" },
+                    { name: "ミコノ", originName: "Mikilo", location: "アルゼンチン（ラ・リオハ）", content: "大きな手を持つ小人。日中の酷暑の時期に徘徊し、子供を捕まえる。", origin: "シエスタ（昼寝）の時間帯に子供が遊ぶのを防ぐための警告から生まれた。" },
+                    { name: "ウアマム", originName: "Huayramama", location: "アルゼンチン（北西部風域）", content: "竜巻を巻き起こして空中を飛ぶ大蛇の怪物。", origin: "嵐の風と大蛇のイメージが合体して誕生した。" },
+                    { name: "ウマボテ", originName: "Runauturunco", location: "アルゼンチン（チャコ・サルタ境界）", content: "人間に変身できる肉食の巨大ジャガー。", origin: "凶悪な人間が邪悪な魔術を用いて動物に変わった姿。" },
+                    { name: "ウプパ", originName: "Upupa", location: "アルゼンチン（山脈部）", content: "夜間に口笛を吹き、答えた者の声を奪う音の怪物。", origin: "夜の山中で聞こえる不気味な風切り音が化けた。" },
+                    { name: "スパイ・チャコ", originName: "Supai Chaco", location: "アルゼンチン（平原部）", content: "草原で火を放ち、旅人を追い詰める火炎の悪霊。", origin: "乾燥期の自然火災への畏怖から発生。" },
+                    { name: "カライ・オクトブレ", originName: "Karaí Octubre", location: "アルゼンチン/パラグアイ境界", content: "貧困と飢餓をもたらす痩せた老人の怪物。10月にやってくる。", origin: "収穫前の食料不足の時期に対する戒めとして生まれた。" },
+                    { name: "ヤカル・ヤカル", originName: "Yacarerubí", location: "アルゼンチン（川沿い）", content: "赤く光る目を持ち、水辺の人間を丸呑みにする巨大ワニ。", origin: "水辺の捕食者への恐怖が誇張された。" },
+                    { name: "ウラ・ネグラ", originName: "Oura Negra", location: "アルゼンチン（山麓）", content: "黒い影となって家畜の生き血を抜き取る正体不明の怪物。", origin: "未知の病気による家畜の急死を説明するために考案された。" }
+                ]
+            },
+            north: {
+                name: "コロンビア・ベネズエラ・ブラジル",
+                subtitle: "北圏域・インカ交易・周辺影響圏",
+                coords: { x: 500, y: 150 },
+                gods: [
+                    { name: "ボチカ", originName: "Bochica", location: "コロンビア（ムイスカ文化圏）", content: "文明、法、農業をもたらした白い髭の賢神。", origin: "人類に秩序を与えるため東の空から現れた。" },
+                    { name: "バチュエ", originName: "Bachué", location: "コロンビア（イグアケ湖）", content: "人類の母とされる女神。湖から現れ、人類を増やした後に大蛇となって湖に戻った。", origin: "聖なる湖の水面から突如として誕生した。" },
+                    { name: "チュブチャカン", originName: "Chibchacum", location: "コロンビア", content: "大地を支える神。大洪水を引き起こしたがボチカに敗れ、大地を背負う罰を受けた。", origin: "世界の基盤を安定させるために存在した。" },
+                    { name: "マリア・リオンサ", originName: "María Lionza", location: "ベネズエラ（ソロテ山）", content: "自然、動物、愛を守護する女神。タップ（バク）に乗った姿で描かれる。", origin: "先住民の姫が語り継がれ、自然霊と融合して神格化した。" },
+                    { name: "ヤモ", originName: "Yamo", location: "ベネズエラ（オリノコ川流域）", content: "太陽の光と風を支配する爽快な神。", origin: "大河を吹き抜ける風から誕生。" },
+                    { name: "トゥパン", originName: "Tupã", location: "ブラジル/パラグアイ（トゥピ・グアラニー圏）", content: "雷と最高天の創造神。", origin: "太陽の光と宇宙の振動から生まれた。" },
+                    { name: "ヤモモ", originName: "Yamomo", location: "コロンビア（アマゾン上流）", content: "毒薬（クラーレなど）と薬草の知恵を人々に授けた神。", origin: "森の植物の精霊が統合して成立。" },
+                    { name: "ルアング", originName: "Luan", location: "ベネズエラ（ギアナ高地）", content: "テプイ（テーブルマウンテン）の頂上に住む天候神。", origin: "雲の上にある太古の土地とともに発生。" },
+                    { name: "ヒラク", originName: "Jiraku", location: "コロンビア（アンデス北端）", content: "翡翠やエメラルドなどの鉱物を生み出す神。", origin: "大地が放つ結晶の輝きから誕生。" },
+                    { name: "カイラ", originName: "Caira", location: "ブラジル（アマゾン西部）", content: "月の運行と潮の満ち引きを管理する神。", origin: "夜の天体と大河の増水現象が結びついて生じた。" }
+                ],
+                monsters: [
+                    { name: "エル・シボロ", originName: "El Silbón", location: "ベネズエラ/コロンビア（ジェノス平原）", content: "父の骨を袋に詰めて運び、不気味な口笛を吹く巨人の放浪妖怪。", origin: "父親を殺害した罰として永久にさまよう呪いを受けた青年。" },
+                    { name: "ラ・ヤロナ", originName: "La Llorona", location: "コロンビア/ベネズエラ等広域", content: "わが子を川で溺れさせ、泣き叫びながら子供を探し続ける女の幽霊。", origin: "愛と絶望から我が子を殺めた罪の苛まれにより誕生。" },
+                    { name: "ラ・サタナ", originName: "La Sayona", location: "ベネズエラ", content: "不貞を働く男の前に現れ、恐怖の牙を露わにして殺害する美女の妖怪。", origin: "嫉妬と誤解から狂気に陥り死んだ女性の怨念。" },
+                    { name: "モハン", originName: "El Mohan", location: "コロンビア（マグダレナ川）", content: "毛深く長い髪を持った川の怪人。タバコを吸い、女性をさらう。", origin: "川の水源を守る古い精霊が凶暴化したもの。" },
+                    { name: "ラ・マドルモンテ", originName: "La Madremonte", location: "コロンビア（森林部）", content: "葉や苔でできた服を着た巨大な女性の森林保護妖怪。森林破壊者を襲う。", origin: "森林の生態系自体の防衛本能が姿を現したもの。" },
+                    { name: "サシ・ペレレ", originName: "Saci Pererê", location: "ブラジル（全域）", content: "片足で赤い帽子を被り、パイプを吸う黒人の魔法の小人。つむじ風を起こす。", origin: "アフリカ系奴隷の伝承と先住民の森の精霊が融合して誕生。" },
+                    { name: "クルピラ", originName: "Curupira", location: "ブラジル（アマゾン）", content: "足首が前後逆についており、赤い髪を持つ森の守護妖怪。密猟者を狂わせる。", origin: "アマゾンのジャングルを守るための不可視の力として存在。" },
+                    { name: "ボト・コル・デ・ローザ", originName: "Boto Cor-de-Rosa", location: "ブラジル/コロンビア（アマゾン川）", content: "美男に変身して夜の祭りに現れ、女性を妊娠させて川へ消えるピンクイルカ。", origin: "アマゾン川イルカの神秘的な生態と未婚の妊娠を説明する伝承が合体。" },
+                    { name: "マピングアリ", originName: "Mapinguari", location: "ブラジル/ペルー境界のアマゾン", content: "赤い毛に覆われ、お腹に大きな口を持つ二足歩行の巨大な怪物。", origin: "太古の巨大ナマケモノ（メガテリウム）の記憶が妖怪化したとされる。" },
+                    { name: "ココ", originName: "El Cuco / Cucuí", location: "南米北圏域全域", content: "悪い子を袋に入れて連れ去るブギーマン（影の怪物）。", origin: "子供の躾と夜の暗闇への恐怖から世界的に派生。" }
+                ]
+            }
+        };
+
+        // --- アプリケーションの状態管理 ---
+        let currentRegionKey = "peru";
+        let activeTab = "gods"; // 'gods' or 'monsters'
+        let searchQuery = "";
+
+        // --- キャンバスと操作（ドラッグ・ズーム）の状態 ---
+        const canvas = document.getElementById("mapCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let transform = {
+            x: 0,
+            y: 0,
+            scale: 1
+        };
+
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+
+        // キャンバスサイズリサイズ
+        function resizeCanvas() {
+            const container = document.getElementById("map-container");
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            drawMap();
+        }
+
+        window.addEventListener("resize", resizeCanvas);
+
+        // --- エジプト風・古地図スタイルの描画関数 ---
+        function drawMap() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(transform.x, transform.y);
+            ctx.scale(transform.scale, transform.scale);
+
+            // 1. 羊皮紙/古文書背景のベース
+            ctx.fillStyle = "#e8dfc8";
+            ctx.fillRect(-1000, -1000, 3000, 3000);
+
+            // 古びた模様（羊皮紙のグリッド/方角線）
+            ctx.strokeStyle = "rgba(197, 179, 136, 0.4)";
+            ctx.lineWidth = 1;
+
+            // 放射状の航海線（コンパスローズ風）
+            const cx = 400, cy = 400;
+            for (let i = 0; i < 16; i++) {
+                const angle = (Math.PI / 8) * i;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + Math.cos(angle) * 1200, cy + Math.sin(angle) * 1200);
+                ctx.stroke();
+            }
+
+            // 緯経線風グリッド
+            for (let x = -500; x < 1500; x += 100) {
+                ctx.beginPath();
+                ctx.moveTo(x, -500);
+                ctx.lineTo(x, 1500);
+                ctx.stroke();
+            }
+            for (let y = -500; y < 1500; y += 100) {
+                ctx.beginPath();
+                ctx.moveTo(-500, y);
+                ctx.lineTo(1500, y);
+                ctx.stroke();
+            }
+
+            // 2. 南米大陸の手描き風海岸線描画
+            ctx.beginPath();
+            ctx.fillStyle = "#f4ebd0"; // 大地の色
+            ctx.strokeStyle = "#8c6d3f"; // 手描き線の茶色
+            ctx.lineWidth = 2;
+
+            // コロンビア〜エクアドル〜ペルー〜チリ〜アルゼンチン〜ブラジルの簡易輪郭
+            ctx.moveTo(320, 100);
+            ctx.bezierCurveTo(280, 150, 240, 220, 270, 300); // エクアドル
+            ctx.bezierCurveTo(300, 380, 330, 420, 370, 480); // ペルー
+            ctx.bezierCurveTo(360, 580, 350, 680, 360, 800); // チリ
+            ctx.bezierCurveTo(400, 850, 450, 820, 480, 750); // アルゼンチン南部
+            ctx.bezierCurveTo(520, 650, 560, 550, 580, 480); // ボリビア/ウルグアイ側
+            ctx.bezierCurveTo(680, 400, 650, 250, 550, 150); // ブラジル
+            ctx.bezierCurveTo(480, 100, 400, 80, 320, 100);  // 北部海岸
+            ctx.fill();
+            ctx.stroke();
+
+            // 海の波線模様（古代地図風）
+            ctx.strokeStyle = "rgba(140, 109, 63, 0.2)";
+            ctx.lineWidth = 1;
+            for (let wy = 150; wy < 800; wy += 60) {
+                ctx.beginPath();
+                ctx.arc(150, wy, 20, 0, Math.PI);
+                ctx.stroke();
+            }
+
+            // 3. 山脈（アンデス山脈）の手描き風シンボル（▲▲▲）
+            ctx.fillStyle = "#d8c9a3";
+            ctx.strokeStyle = "#7a6011";
+            ctx.lineWidth = 1.5;
+
+            const mountainCoords = [
+                {x: 320, y: 160}, {x: 300, y: 240}, {x: 340, y: 320}, 
+                {x: 380, y: 400}, {x: 420, y: 480}, {x: 400, y: 560}, 
+                {x: 390, y: 640}, {x: 380, y: 720}
+            ];
+
+            mountainCoords.forEach(m => {
+                ctx.beginPath();
+                ctx.moveTo(m.x, m.y - 15);
+                ctx.lineTo(m.x - 12, m.y + 10);
+                ctx.lineTo(m.x + 12, m.y + 10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            });
+
+            // 4. 古代羅針盤（Compass Rose）の描画
+            drawCompassRose(180, 200);
+
+            // 5. 各地域のインタラクティブノード（ピン）の描画
+            Object.keys(mapData).forEach(key => {
+                const reg = mapData[key];
+                const isSelected = (key === currentRegionKey);
+
+                // ノード外輪（円）
+                ctx.beginPath();
+                ctx.arc(reg.coords.x, reg.coords.y, isSelected ? 22 : 16, 0, Math.PI * 2);
+                ctx.fillStyle = isSelected ? "rgba(212, 175, 55, 0.8)" : "rgba(232, 223, 200, 0.9)";
+                ctx.fill();
+                ctx.strokeStyle = isSelected ? "#3a2e2b" : "#b38f28";
+                ctx.lineWidth = isSelected ? 3 : 2;
+                ctx.stroke();
+
+                // アイコン（太陽風デザイン）
+                ctx.beginPath();
+                ctx.arc(reg.coords.x, reg.coords.y, isSelected ? 10 : 7, 0, Math.PI * 2);
+                ctx.fillStyle = isSelected ? "#ffffff" : "#d4af37";
+                ctx.fill();
+
+                // 地域名テキスト
+                ctx.font = isSelected ? "bold 16px 'Times New Roman', serif" : "14px 'Times New Roman', serif";
+                ctx.fillStyle = "#3a2e2b";
+                ctx.textAlign = "center";
+                ctx.fillText(reg.name, reg.coords.x, reg.coords.y + (isSelected ? 38 : 32));
+            });
+
+            ctx.restore();
+        }
+
+        // 装飾用羅針盤の描画
+        function drawCompassRose(cx, cy) {
+            ctx.save();
+            ctx.strokeStyle = "#8c6d3f";
+            ctx.fillStyle = "#8c6d3f";
+            ctx.lineWidth = 1;
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, 30, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // N S E W 針
+            const points = [
+                {x: cx, y: cy - 40}, {x: cx + 40, y: cy},
+                {x: cx, y: cy + 40}, {x: cx - 40, y: cy}
+            ];
+
+            points.forEach((p, i) => {
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+            });
+
+            ctx.font = "bold 12px serif";
+            ctx.fillText("N", cx - 4, cy - 44);
+            ctx.restore();
+        }
+
+        // --- UIとサイドパネルの動的生成 ---
+        function renderRegionTabs() {
+            const container = document.getElementById("regionTabs");
+            container.innerHTML = "";
+
+            Object.keys(mapData).forEach(key => {
+                const reg = mapData[key];
+                const btn = document.createElement("button");
+                btn.className = `region-tab ${key === currentRegionKey ? 'active' : ''}`;
+                btn.innerText = reg.name;
+                btn.onclick = () => selectRegion(key);
+                container.appendChild(btn);
+            });
+        }
+
+        function selectRegion(key) {
+            currentRegionKey = key;
+            const reg = mapData[key];
+
+            document.getElementById("sidebarTitle").innerText = `${reg.name}（${reg.subtitle}）`;
+            renderRegionTabs();
+            renderItemList();
+
+            // 該当地域へ滑らかにスクロール（フォーカス）
+            transform.x = canvas.width / 2 - reg.coords.x * transform.scale;
+            transform.y = canvas.height / 2 - reg.coords.y * transform.scale;
+            drawMap();
+        }
+
+        function renderItemList() {
+            const container = document.getElementById("itemList");
+            container.innerHTML = "";
+
+            const reg = mapData[currentRegionKey];
+            const items = activeTab === "gods" ? reg.gods : reg.monsters;
+
+            // 検索フィルタリング
+            const filteredItems = items.filter(item => {
+                if (!searchQuery) return true;
+                const q = searchQuery.toLowerCase();
+                return item.name.toLowerCase().includes(q) ||
+                       item.originName.toLowerCase().includes(q) ||
+                       item.location.toLowerCase().includes(q) ||
+                       item.content.toLowerCase().includes(q) ||
+                       item.origin.toLowerCase().includes(q);
+            });
+
+            if (filteredItems.length === 0) {
+                container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">該当する伝承が見つかりませんでした。</p>`;
+                return;
+            }
+
+            filteredItems.forEach(item => {
+                const card = document.createElement("div");
+                card.className = "item-card";
+                card.innerHTML = `
+                    <div class="item-title">
+                        <span>${item.name}</span>
+                        <span style="font-size:0.85rem; color:var(--text-muted); font-weight:normal;">(${item.originName})</span>
+                    </div>
+                    <div class="item-location">📍 ${item.location}</div>
+                    <div class="item-section">
+                        <div class="item-section-title">【内容・神性】</div>
+                        <div>${item.content}</div>
+                    </div>
+                    <div class="item-section">
+                        <div class="item-section-title">【誕生経緯】</div>
+                        <div>${item.origin}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // --- タブ切り替え処理 ---
+        document.getElementById("tabGods").onclick = function() {
+            activeTab = "gods";
+            this.classList.add("active");
+            document.getElementById("tabMonsters").classList.remove("active");
+            renderItemList();
+        };
+
+        document.getElementById("tabMonsters").onclick = function() {
+            activeTab = "monsters";
+            this.classList.add("active");
+            document.getElementById("tabGods").classList.remove("active");
+            renderItemList();
+        };
+
+        // 検索窓イベント
+        document.getElementById("searchInput").oninput = function(e) {
+            searchQuery = e.target.value.trim();
+            renderItemList();
+        };
+
+        // --- 地図のドラッグ＆ズーム操作 ---
+        const mapContainer = document.getElementById("map-container");
+
+        mapContainer.addEventListener("mousedown", (e) => {
+            isDragging = true;
+            dragStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+        });
+
+        window.addEventListener("mousemove", (e) => {
+            if (!isDragging) return;
+            transform.x = e.clientX - dragStart.x;
+            transform.y = e.clientY - dragStart.y;
+            drawMap();
+        });
+
+        window.addEventListener("mouseup", () => {
+            isDragging = false;
+        });
+
+        // ズーム（ホイール）
+        mapContainer.addEventListener("wheel", (e) => {
+            e.preventDefault();
+            const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+            const newScale = transform.scale * zoomFactor;
+
+            if (newScale >= 0.5 && newScale <= 3.0) {
+                // マウス位置を中心にズーム
+                const mouseX = e.clientX;
+                const mouseY = e.clientY;
+
+                transform.x = mouseX - (mouseX - transform.x) * zoomFactor;
+                transform.y = mouseY - (mouseY - transform.y) * zoomFactor;
+                transform.scale = newScale;
+
+                drawMap();
+            }
+        }, { passive: false });
+
+        // 地図上のタップ（ノードクリック判定）
+        mapContainer.addEventListener("click", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left - transform.x) / transform.scale;
+            const clickY = (e.clientY - rect.top - transform.y) / transform.scale;
+
+            Object.keys(mapData).forEach(key => {
+                const reg = mapData[key];
+                const dist = Math.hypot(reg.coords.x - clickX, reg.coords.y - clickY);
+                if (dist < 25) { // ピン判定範囲
+                    selectRegion(key);
+                }
+            });
+        });
+
+        // ズームボタン操作
+        document.getElementById("zoomIn").onclick = () => {
+            transform.scale = Math.min(transform.scale * 1.2, 3.0);
+            drawMap();
+        };
+        document.getElementById("zoomOut").onclick = () => {
+            transform.scale = Math.max(transform.scale / 1.2, 0.5);
+            drawMap();
+        };
+        document.getElementById("zoomReset").onclick = () => {
+            transform.scale = 1;
+            selectRegion("peru");
+        };
+
+        // --- 初期化 ---
+        window.onload = () => {
+            resizeCanvas();
+            renderRegionTabs();
+            selectRegion("peru");
+        };
+    </script>
+</body>
+</html>
